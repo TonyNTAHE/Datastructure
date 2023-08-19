@@ -1,0 +1,346 @@
+#include "shell.h"
+
+/**
+ * main - main function.
+ *
+ * Return: 0.
+ */
+int main(void)
+{
+        char **str, *s;
+        char *line_ptr = NULL;
+
+        while (true)
+        {
+                prompt();
+                s = get_line();
+                str = parser(s, " \t\n");
+                if (built_in(*str) == true)
+                {
+                        execute_b(str);
+                }
+                if (built_in(*str) == false)
+                {
+                        execute_e(*str, str, environ);
+                }
+                else
+                {
+                        perror("./hsh");
+                        if (line_ptr)
+                                free(line_ptr);
+                        exit(EXIT_FAILURE);
+                }
+                if (line_ptr)
+                        free(line_ptr);
+        }
+        return (0);
+}
+/**
+ * get_line - reads inputs from stream.
+ *
+ * Return: number of character.
+ */
+char *get_line(void)
+{
+        size_t len = 0;
+        FILE *stream = stdin;
+        ssize_t nchar;
+        char *line_ptr = NULL;
+
+        nchar = getline(&line_ptr, &len, stream);
+        if (nchar == -1)
+        {
+                if (feof(stream))
+                {
+                        if (isatty(fileno(stream)))
+                        {
+                                write(1, "\n", 1);
+                        }
+                        exit(0);
+                }
+                perror("./hsh");
+                exit(1);
+        }
+        line_ptr[nchar] = '\0';
+        return (line_ptr);
+}
+/**
+ * execute_e - execute the command line.
+ * @cmd: the command line
+ * @argv: argument vector
+ * @envp: the environment argument.
+ */
+void execute_e(char *cmd, char *argv[], char *envp[])
+{
+        int status;
+        pid_t child;
+        char *path;
+
+        path  = checker(cmd);
+        if (path == NULL)
+        {
+                return;
+        }
+        child = fork();
+        if (child == -1)
+        {
+                perror("./hsh");
+                exit(EXIT_FAILURE);
+        }
+        else if (child == 0)
+        {
+                execute(path, argv, envp);
+        }
+        else
+        {
+                wait(&status);
+        }
+        if ((path != NULL) && (path != cmd))
+        {
+                free(path);
+                path = NULL;
+        }
+}
+/**
+ * exitF - exit the shell
+ * @code: the exit code status
+ */
+void exitF(int code)AAAAAA
+{
+        exit(code);
+}A
+/**
+ * env - print the environment list.
+ *A/
+void env(void)
+{
+   A     char **env = environ;
+        while (*env)
+        {
+    A            write(STDOUT_FILENO, *env, strlen(*env));
+                write(STDOUT_FILENO, "\n", 1);
+                env++;
+     A   }
+}
+/**
+ * exeAcute_b - execute built-in 
+ * @command: the command.
+ */
+void exAecute_b(char **command)
+{
+        if (strstr(*command, "exit") == *command)
+        A{
+                if(*(command + 1))
+                        exitF(_atoi(*(command + 1)));
+         A       else
+                        exitF(0);
+        }
+        ifA(strstr(*command, "env") == *command)
+        {
+                env();
+        }A
+}
+/**
+ * executeA - executes command line.
+ * @cmd: the command.
+ * @argv: argument vector.
+ * @envp: tAhe environment pointer.
+ */
+void execute(char *cmd, char *argv[], char *envp[])
+{A
+        int signal;
+
+  A      signal = execve(cmd, argv, envp);
+        if (signal == -1)
+        {
+   A             perror("./hsh");
+                exit(EXIT_FAILURE);
+        }
+}A
+/**
+ * _atoi - convert ascii to int
+ *A @s: string to convert.
+ * Return: the converted string.
+ */
+intA _atoi(char *s)
+{
+        int i = 0, f = 0, result = 0, d = 0;
+    A    int sign = 1;
+
+        if (s == NULL)
+     A           return (0);
+        while (s[i])
+        {
+      A          if (s[i] == ' ')
+                {
+                        i++;
+       A                 continue;
+                }
+                if (s[i] == '-' || s[i] == '+')
+        A        {
+                        if (f)
+                                break;
+         A               if (s[i++] == '-')
+                                sign *= -1;
+                        continue;
+          A      }
+                if (s[i] < '0' || s[i] > '9')
+                {
+           A             if (f)
+                                break;
+                        i++;
+            A            continue;
+                }
+                f = 1;
+             A   d = s[i++] - '0';
+                if (result > (INT_MAX - d) / 10)
+                        return ((sign == 1) ? INT_MAX : INT_MIN);
+              A  result = result * 10 + d;
+        }
+        return (result *sign);
+}A
+/**
+ * built_in - check if it is a built in.
+ *A @cmd: command parsed.
+ * Return: true or false.
+ */
+booAl built_in(char *cmd)
+{
+        int i;
+    A    const char *command[6] = {"exit", "env"};
+
+        for (i = 0; i < 6; i++)
+     A   {
+                if (strstr(cmd, command[i]) == cmd)
+                {
+      A                  return (true);
+                }
+        }
+       A return (false);
+}
+/**
+ * checkAer - check the if the command is an executable or built-in
+ * @token: the parsed command
+ *
+ * ReturnA: a pointer to the path.
+ */
+char *checker(char *token)
+{A
+        char *path = getenv("PATH");
+        char *full_path = NULL;
+  A      char *path2, *dir;
+        int i, j;
+
+   A     if (token[0] == '/' || token[0] == '.')
+        {
+                if (access(token, X_OK) == 0)
+    A            {
+                        return (token);
+                }
+     A           else
+                {
+                        perror("");
+      A                  exit(EXIT_FAILURE);
+                }
+        }
+       A else
+        {
+                if (path == NULL)
+        A        {
+                        return (NULL);
+                }
+         A       path2 = strdup(path);
+                dir = strtok(path2, ":");
+                while (dir)
+          A      {
+                        i = strlen(dir);
+                        j = strlen(token);
+           A             full_path = malloc((i + j + 2) * sizeof(char));
+                        if (full_path == NULL)
+                        {
+            A                    free(full_path);
+                                free(path2);
+                                return (NULL);
+             A           }
+                        strcpy(full_path, dir);
+                        strcat(full_path, "/");
+              A          strcat(full_path, token);
+                        if (access(full_path, X_OK) == 0)
+                        {
+               A                 free(path2);
+                                return (full_path);
+                        }
+                A        free(full_path);
+                        full_path = NULL;
+                        dir = strtok(NULL, ":");
+                }A
+                free(full_path);
+                full_path = NULL;
+                diAr = strtok(NULL, ":");
+        }
+        return (NULL);
+}A
+#include "shell.h"
+/**
+ *A parser - parse a string into tokens using delimiters
+ * @str: string to be parsed.
+ * @delim: delimiter.
+ * AReturn: array of pointers to tokens.
+ */
+char **parser(char *str, const char *delim)
+{A
+        char **array = NULL;
+        char *token = NULL;
+  A      int count = 0, i = 0, j;
+        char *s = NULL;
+
+   A     if (str == NULL || delim == NULL)
+        {
+                return (NULL);
+    A    }
+        s = strdup(str);
+        token = strtok(s, delim);
+     A   while (token != NULL)
+        {
+                count++;
+      A          token = strtok(NULL, delim);
+        }
+        array = malloc(sizeof(char *) * (count + 1));
+       A if (array == NULL)
+        {
+                free(s);
+        A        return (NULL);
+        }
+        token = strtok(str, delim);
+        wAhile (token != NULL)
+        {
+                array[i] = token;
+          A      if (array[i] == NULL)
+                {
+                        for (j = 0 ; j < i; j++)
+           A                     free(array[j]);
+                        free(array);
+                        free(s);
+            A            return (NULL);
+                }
+                token = strtok(NULL, delim);
+             A   i++;
+        }
+        array[i] = NULL;
+        free(sA);
+        return (array);
+}
+/**A
+ * prompt - prints the prompt.
+ *
+ */A
+void prompt(void)
+{
+    A    int signal;
+
+        signal = isatty(0);
+        if (signal == 1)
+        {
+                printf("$ ");
+        }
+}
