@@ -33,7 +33,7 @@ char *checker(char *token)
 
 	if (token[0] == '/' || token[0] == '.')
 	{
-		if (access(cmd, X_OK) == 0)
+		if (access(token, X_OK) == 0)
 		{
 			return (token);
 		}
